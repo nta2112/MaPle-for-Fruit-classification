@@ -275,7 +275,6 @@ class Fruit(DatasetBase):
             imgs = self._collect_images(c)
             if not imgs:
                 continue
-            # Deterministic split per class
             random.Random(42).shuffle(imgs)
             n_total = len(imgs)
             n_train = max(1, int(n_total * p_trn))
@@ -296,11 +295,21 @@ class Fruit(DatasetBase):
                 val.append(Datum(impath=p, label=label, classname=cname))
 
         # 3. Novel classes (unseen test classes)
+        # Tương tự như benchmark CoOp/MaPLe chuẩn: chia train/test cho novel classes
+        # Khi đánh giá zero-shot eval-only trên novel classes, Dassl vẫn cần train_x có nhãn để xác định _num_classes
         for c in self.novel_classes:
             imgs = self._collect_images(c)
+            if not imgs:
+                continue
+            random.Random(42).shuffle(imgs)
+            n_total = len(imgs)
+            n_train = max(1, int(n_total * p_trn))
             label = class_to_label[c]
             cname = CLASS_NAME_MAP.get(c, c.replace("_", " ").replace("-", " "))
-            for p in imgs:
+
+            for p in imgs[:n_train]:
+                train.append(Datum(impath=p, label=label, classname=cname))
+            for p in imgs[n_train:]:
                 test.append(Datum(impath=p, label=label, classname=cname))
 
         return train, val, test
