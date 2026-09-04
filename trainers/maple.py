@@ -304,12 +304,16 @@ class MaPLe(TrainerX):
         if prec == "amp":
             with autocast():
                 loss = model(image, label)
+                if loss.dim() > 0:
+                    loss = loss.mean()
             optim.zero_grad()
             scaler.scale(loss).backward()
             scaler.step(optim)
             scaler.update()
         else:
             loss = model(image, label)
+            if loss.dim() > 0:
+                loss = loss.mean()
             optim.zero_grad()
             loss.backward()
             optim.step()
