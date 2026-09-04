@@ -5,8 +5,41 @@ import random
 from collections import defaultdict
 from pathlib import Path
 
-from dassl.data.datasets import DATASET_REGISTRY, Datum, DatasetBase
-from dassl.utils import mkdir_if_missing, read_json, write_json
+try:
+    from dassl.data.datasets import DATASET_REGISTRY, Datum, DatasetBase
+    from dassl.utils import mkdir_if_missing, read_json, write_json
+except ImportError:
+    # Fallback khi chưa cài đặt Dassl hoặc dùng độc lập cho inference/eval
+    class _MockRegistry:
+        def register(self):
+            def decorator(cls):
+                return cls
+            return decorator
+
+    DATASET_REGISTRY = _MockRegistry()
+
+    class Datum:
+        def __init__(self, impath="", label=0, domain=0, classname=""):
+            self.impath = impath
+            self.label = label
+            self.domain = domain
+            self.classname = classname
+
+    class DatasetBase:
+        def __init__(self, train_x=None, train_u=None, val=None, test=None):
+            self.train_x = train_x or []
+            self.train_u = train_u or []
+            self.val = val or []
+            self.test = test or []
+
+    def mkdir_if_missing(d):
+        os.makedirs(d, exist_ok=True)
+    def read_json(p):
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    def write_json(obj, p):
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(obj, f, indent=4)
 
 
 CLASS_NAME_MAP = {

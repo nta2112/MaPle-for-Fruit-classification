@@ -290,31 +290,59 @@ def main():
 
         if args.zeroshot:
             print("Running Baseline: Zero-shot CLIP ViT-B/16 (without prompt learning)")
-            from dassl.config import get_cfg_default
-            from train import extend_cfg, reset_cfg
-            from trainers.maple import load_clip_to_cpu
+            # Load standard ViT-B/16 directly via clip module without requiring dassl
+            url = clip._MODELS.get("ViT-B/16")
+            model_path = clip._download(url) if url else None
+            try:
+                state_dict = torch.jit.load(model_path, map_location="cpu").state_dict() if model_path else None
+            except RuntimeError:
+                state_dict = torch.load(model_path, map_location="cpu") if model_path else None
 
-            cfg = get_cfg_default()
-            extend_cfg(cfg)
-            cfg.MODEL.BACKBONE.NAME = "ViT-B/16"
-            clip_model = load_clip_to_cpu(cfg).to(device)
+            design_details = {
+                "trainer": "MaPLe",
+                "vision_depth": 0,
+                "language_depth": 0,
+                "vision_ctx": 0,
+                "language_ctx": 0,
+                "maple_length": 2
+            }
+            clip_model = clip.build_model(state_dict, design_details).to(device)
             features, labels = extract_features(clip_model, loader, device, is_maple=False)
             model_name = "Zero-shot CLIP (ViT-B/16)"
         else:
             print(f"Loading trained MaPLe model from: {args.model_dir}")
-            from dassl.config import get_cfg_default
-            from dassl.utils import load_checkpoint
-            from train import extend_cfg
-            from trainers.maple import CustomCLIP, load_clip_to_cpu
+            # Build MaPLe architecture directly
+            url = clip._MODELS.get("ViT-B/16")
+            model_path = clip._download(url) if url else None
+            try:
+                state_dict = torch.jit.load(model_path, map_location="cpu").state_dict() if model_path else None
+            except RuntimeError:
+                state_dict = torch.load(model_path, map_location="cpu") if model_path else None
 
-            cfg = get_cfg_default()
-            extend_cfg(cfg)
-            cfg.MODEL.BACKBONE.NAME = "ViT-B/16"
+            design_details = {
+                "trainer": "MaPLe",
+                "vision_depth": 0,
+                "language_depth": 0,
+                "vision_ctx": 0,
+                "language_ctx": 0,
+                "maple_length": 2
+            }
+            clip_model = clip.build_model(state_dict, design_details)
+
+            # Minimal CFG stand-in for CustomCLIP
+            class _CfgObj:
+                pass
+            cfg = _CfgObj()
+            cfg.INPUT = _CfgObj()
+            cfg.INPUT.SIZE = (224, 224)
+            cfg.TRAINER = _CfgObj()
+            cfg.TRAINER.MAPLE = _CfgObj()
             cfg.TRAINER.MAPLE.N_CTX = 2
+            cfg.TRAINER.MAPLE.CTX_INIT = "a photo of a"
             cfg.TRAINER.MAPLE.PROMPT_DEPTH = 9
             cfg.TRAINER.MAPLE.PREC = "fp16"
 
-            clip_model = load_clip_to_cpu(cfg)
+            from trainers.maple import CustomCLIP
             classnames = [CLASS_NAME_MAP.get(c, c.replace("_", " ").replace("-", " ")) for c in target_classes]
             model = CustomCLIP(cfg, classnames, clip_model)
 
@@ -338,8 +366,8 @@ def main():
 
             if ckpt_path and os.path.isfile(ckpt_path):
                 print(f"Loading weights from: {ckpt_path}")
-                checkpoint = load_checkpoint(ckpt_path)
-                state_dict = checkpoint["state_dict"]
+                checkpoint = torch.load(ckpt_path, map_location="cpu")
+                state_dict = checkpoint.get("state_dict", checkpoint)
                 if "prompt_learner.token_prefix" in state_dict:
                     del state_dict["prompt_learner.token_prefix"]
                 if "prompt_learner.token_suffix" in state_dict:
