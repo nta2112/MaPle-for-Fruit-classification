@@ -19,6 +19,17 @@ for _p in _possible_dassl_dirs:
     if os.path.isdir(_p) and _p not in sys.path:
         sys.path.insert(0, _p)
 
+# Patch compatibility cho PyTorch >= 2.6+ (weights_only mặc định là True làm lỗi load checkpoint Dassl)
+try:
+    _orig_torch_load = torch.load
+    def _patched_torch_load(*args, **kwargs):
+        if "weights_only" not in kwargs:
+            kwargs["weights_only"] = False
+        return _orig_torch_load(*args, **kwargs)
+    torch.load = _patched_torch_load
+except Exception:
+    pass
+
 # Patch compatibility cho PyTorch >= 2.2 / 2.3+ (Dassl truyền verbose vào LRScheduler.__init__)
 try:
     import torch.optim.lr_scheduler as _lr_sched

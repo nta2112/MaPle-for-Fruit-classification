@@ -51,6 +51,17 @@ for _p in _possible_dassl_dirs:
 import numpy as np
 import torch
 import torch.nn.functional as F
+
+# Patch compatibility cho PyTorch >= 2.6+ (weights_only mặc định là True làm lỗi load checkpoint Dassl)
+try:
+    _orig_torch_load = torch.load
+    def _patched_torch_load(*args, **kwargs):
+        if "weights_only" not in kwargs:
+            kwargs["weights_only"] = False
+        return _orig_torch_load(*args, **kwargs)
+    torch.load = _patched_torch_load
+except Exception:
+    pass
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
