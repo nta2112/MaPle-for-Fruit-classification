@@ -1,5 +1,17 @@
+import os
+import sys
 import argparse
 import torch
+
+# Tự động tìm kiếm và thêm Dassl.pytorch vào sys.path nếu chưa có trong environment (Kaggle/Colab/Local)
+_possible_dassl_dirs = [
+    "/kaggle/working/Dassl.pytorch",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Dassl.pytorch")),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "Dassl.pytorch")),
+]
+for _p in _possible_dassl_dirs:
+    if os.path.isdir(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from dassl.utils import setup_logger, set_random_seed, collect_env_info
 from dassl.config import get_cfg_default
