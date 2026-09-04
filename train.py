@@ -8,10 +8,30 @@ _possible_dassl_dirs = [
     "/kaggle/working/Dassl.pytorch",
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Dassl.pytorch")),
     os.path.abspath(os.path.join(os.path.dirname(__file__), "Dassl.pytorch")),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Dassl.pytorch")),
 ]
 for _p in _possible_dassl_dirs:
     if os.path.isdir(_p) and _p not in sys.path:
         sys.path.insert(0, _p)
+
+# Patch compatibility cho PyTorch >= 2.2 / 2.3+ (Dassl truyền verbose vào LRScheduler.__init__)
+try:
+    import torch.optim.lr_scheduler as _lr_sched
+    _BaseSched = getattr(_lr_sched, "LRScheduler", getattr(_lr_sched, "_LRScheduler", None))
+    if _BaseSched is not None:
+        _orig_sched_init = _BaseSched.__init__
+        def _patched_sched_init(self, optimizer, *args, **kwargs):
+            kwargs.pop("verbose", None)
+            if len(args) == 2:
+                # args: (last_epoch, verbose)
+                _orig_sched_init(self, optimizer, last_epoch=args[0], **kwargs)
+            elif len(args) == 1:
+                _orig_sched_init(self, optimizer, last_epoch=args[0], **kwargs)
+            else:
+                _orig_sched_init(self, optimizer, *args, **kwargs)
+        _BaseSched.__init__ = _patched_sched_init
+except Exception:
+    pass
 
 from dassl.utils import setup_logger, set_random_seed, collect_env_info
 from dassl.config import get_cfg_default

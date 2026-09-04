@@ -40,6 +40,7 @@ from pathlib import Path
 
 _possible_dassl_dirs = [
     "/kaggle/working/Dassl.pytorch",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Dassl.pytorch")),
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Dassl.pytorch")),
     os.path.abspath(os.path.join(os.path.dirname(__file__), "Dassl.pytorch")),
 ]
@@ -308,12 +309,11 @@ def main():
                 state_dict = torch.load(model_path, map_location="cpu") if model_path else None
 
             design_details = {
-                "trainer": "MaPLe",
+                "trainer": "CoOp",
                 "vision_depth": 0,
                 "language_depth": 0,
                 "vision_ctx": 0,
                 "language_ctx": 0,
-                "maple_length": 2
             }
             clip_model = clip.build_model(state_dict, design_details).to(device)
             features, labels = extract_features(clip_model, loader, device, is_maple=False)
