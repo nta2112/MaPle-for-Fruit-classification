@@ -17,6 +17,7 @@ import datasets.sun397
 import datasets.caltech101
 import datasets.ucf101
 import datasets.imagenet
+import datasets.fruit
 
 import datasets.imagenet_sketch
 import datasets.imagenetv2
@@ -47,6 +48,9 @@ def print_args(args, cfg):
 def reset_cfg(cfg, args):
     if args.root:
         cfg.DATASET.ROOT = args.root
+
+    if hasattr(args, "split_path") and args.split_path:
+        cfg.DATASET.SPLIT_PATH = args.split_path
 
     if args.output_dir:
         cfg.OUTPUT_DIR = args.output_dir
@@ -88,6 +92,8 @@ def extend_cfg(cfg):
         cfg.TRAINER.MY_MODEL.PARAM_C = False
     """
     from yacs.config import CfgNode as CN
+
+    cfg.DATASET.SPLIT_PATH = ""
 
     cfg.TRAINER.COOP = CN()
     cfg.TRAINER.COOP.N_CTX = 16  # number of context vectors
@@ -180,6 +186,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=str, default="", help="path to dataset")
+    parser.add_argument("--split-path", type=str, default="", help="path to split json file")
     parser.add_argument("--output-dir", type=str, default="", help="output directory")
     parser.add_argument(
         "--resume",

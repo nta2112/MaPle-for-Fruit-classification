@@ -1,0 +1,5 @@
+DATASET:
+  NAME: "Fruit"
+
+DATALOADER:
+  NUM_WORKERS: 2
